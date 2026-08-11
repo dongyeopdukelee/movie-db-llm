@@ -14,3 +14,12 @@ movie-db-llm = "movie_db_llm:main"
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.pyright]
+typeCheckingMode = "strict"
+include = ["src", "tests"]
+
+[dependency-groups]
+dev = [
+    "pyright[nodejs]>=1.1.411",
+]
