@@ -24,5 +24,6 @@ include = ["src", "tests"]
 
 [dependency-groups]
 dev = [
+    "pip>=26.2.1",
     "pyright[nodejs]>=1.1.411",
 ]
