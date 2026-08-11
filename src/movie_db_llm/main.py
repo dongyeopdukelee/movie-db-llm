@@ -3,7 +3,6 @@
 import uvicorn
 from fastapi import FastAPI
 
-
 app = FastAPI(title="Movie DB LLM")
 
 

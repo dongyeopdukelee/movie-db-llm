@@ -24,8 +24,20 @@ include = ["src", "tests"]
 venvPath = "."
 venv = ".venv"
 
+[tool.ruff]
+# Follow the traditional PEP 8 maximum line length.
+line-length = 79
+# Allow lint suggestions that use our minimum supported Python version's syntax.
+target-version = "py314"
+
+[tool.ruff.lint]
+# E: PEP 8 errors; F: common name and import bugs; I: import ordering;
+# UP: safe modern-Python upgrades; B: common bug-prone patterns.
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
 [dependency-groups]
 dev = [
     "pip>=26.2.1",
     "pyright[nodejs]>=1.1.411",
+    "ruff>=0.16.2",
 ]

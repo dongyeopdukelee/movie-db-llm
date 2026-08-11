@@ -19,5 +19,6 @@ when a decision is made, changed, or removed.
 - SQLAlchemy ORM 2 will access the database.
 - Dependencies and the project-local virtual environment will be managed with uv.
 - Pyright in strict mode will enforce static type checking.
+- Ruff will lint and format Python code.
 - Docker will containerize the application.
 - Docker Compose will define and run the local application stack.
