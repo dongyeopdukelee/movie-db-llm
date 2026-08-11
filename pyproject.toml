@@ -21,6 +21,8 @@ build-backend = "uv_build"
 [tool.pyright]
 typeCheckingMode = "strict"
 include = ["src", "tests"]
+venvPath = "."
+venv = ".venv"
 
 [dependency-groups]
 dev = [
