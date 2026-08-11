@@ -17,5 +17,6 @@ when a decision is made, changed, or removed.
 - Uvicorn will serve the FastAPI application locally and in containers.
 - The initial database is SQLite.
 - SQLAlchemy ORM 2 will access the database.
+- Dependencies and the project-local virtual environment will be managed with uv.
 - Docker will containerize the application.
 - Docker Compose will define and run the local application stack.
