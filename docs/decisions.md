@@ -16,5 +16,6 @@ when a decision is made, changed, or removed.
 - The web API framework is FastAPI.
 - Uvicorn will serve the FastAPI application locally and in containers.
 - The initial database is SQLite.
+- SQLAlchemy ORM 2 will access the database.
 - Docker will containerize the application.
 - Docker Compose will define and run the local application stack.
