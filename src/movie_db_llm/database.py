@@ -1,9 +1,10 @@
 """Database setup and initialization."""
 
+from collections.abc import Generator
 from sqlite3 import Connection as SQLiteConnection
 
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import ConnectionPoolEntry
 
 from movie_db_llm.models import Base
@@ -30,3 +31,9 @@ def initialize_database() -> None:
 
     with SessionLocal() as session:
         seed_catalog(session)
+
+
+def get_session() -> Generator[Session]:
+    """Provide a database session for one request."""
+    with SessionLocal() as session:
+        yield session

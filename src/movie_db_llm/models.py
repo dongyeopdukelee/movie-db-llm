@@ -20,7 +20,7 @@ class Movie(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(255), index=True)
     synopsis: Mapped[str] = mapped_column(Text)
-    release_year: Mapped[int | None]
+    release_year: Mapped[int]
     genre_assignments: Mapped[list[MovieGenre]] = relationship(
         back_populates="movie",
         cascade="all, delete-orphan",

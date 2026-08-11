@@ -1,11 +1,24 @@
 """Tests for initial catalog seeding."""
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import Session
 
 from movie_db_llm.genres import Genre
 from movie_db_llm.models import Base, Movie
 from movie_db_llm.seed import seed_catalog
+
+
+def test_movie_release_year_is_required() -> None:
+    """New movie records must include a release year."""
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+
+    columns = inspect(engine).get_columns("movies")
+    release_year = next(
+        column for column in columns if column["name"] == "release_year"
+    )
+
+    assert release_year["nullable"] is False
 
 
 def test_seed_catalog_adds_each_movie_once() -> None:
