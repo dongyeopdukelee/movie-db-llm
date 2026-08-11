@@ -29,3 +29,5 @@ when a decision is made, changed, or removed.
 - Ruff will lint and format Python code.
 - Docker will containerize the application.
 - Docker Compose will define and run the local application stack.
+- Docker Compose will provide `DATABASE_URL` and persist the SQLite database in
+  a named Docker volume.

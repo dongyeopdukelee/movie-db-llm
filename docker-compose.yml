@@ -1,0 +1,12 @@
+services:
+  api:
+    build: .
+    environment:
+      DATABASE_URL: sqlite:////app/data/movie_db.sqlite3
+    ports:
+      - "8000:8000"
+    volumes:
+      - movie-db-data:/app/data
+
+volumes:
+  movie-db-data:
