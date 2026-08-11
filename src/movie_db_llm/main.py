@@ -1,12 +1,24 @@
 """FastAPI application entry point."""
 
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from typing import Literal
 
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-app = FastAPI(title="Movie DB LLM")
+from movie_db_llm.database import initialize_database
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
+    """Initialize local application resources."""
+    initialize_database()
+    yield
+
+
+app = FastAPI(title="Movie DB LLM", lifespan=lifespan)
 
 
 class HealthResponse(BaseModel):

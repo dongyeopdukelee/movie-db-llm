@@ -7,8 +7,12 @@ when a decision is made, changed, or removed.
 
 - The initial product is an API-first movie catalog for browsing and title search.
 - The first catalog will use a small, locally seeded dataset.
+- Movies and predefined genres will use a normalized `movies` / `movie_genres`
+  association-table design; a separate genre lookup table is not needed yet.
 - LLM features, user accounts, external movie-data providers, and a frontend
   are deferred until after the core movie API works.
+- Future natural-language retrieval will combine structured metadata filters
+  with semantic vector search; it is deferred from the initial product.
 
 ## Technology
 
