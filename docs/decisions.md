@@ -24,6 +24,7 @@ when a decision is made, changed, or removed.
 - Uvicorn will serve the FastAPI application locally and in containers.
 - The initial database is SQLite.
 - SQLAlchemy ORM 2 will access the database.
+- Alembic will manage database schema migrations.
 - Dependencies and the project-local virtual environment will be managed with uv.
 - Pyright in strict mode will enforce static type checking.
 - Ruff will lint and format Python code.
