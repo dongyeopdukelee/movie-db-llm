@@ -2,6 +2,9 @@
 
 A small FastAPI movie-catalog API built as a system-design learning project.
 
+See the [product roadmap](docs/roadmap.md) for the planned path from a catalog
+API to grounded natural-language movie recommendations.
+
 ## Local development
 
 Install the locked dependencies:
