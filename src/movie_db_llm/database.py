@@ -1,17 +1,15 @@
 """Database setup and initialization."""
 
 from collections.abc import Generator
-from os import environ
 from sqlite3 import Connection as SQLiteConnection
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import ConnectionPoolEntry
 
+from movie_db_llm.config import DATABASE_URL
 from movie_db_llm.models import Base
 from movie_db_llm.seed import seed_catalog
-
-DATABASE_URL = environ.get("DATABASE_URL", "sqlite:///./movie_db.sqlite3")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
