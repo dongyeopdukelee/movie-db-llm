@@ -9,6 +9,7 @@ when a decision is made, changed, or removed.
 - The first catalog will use a small, locally seeded dataset.
 - Movies and predefined genres will use a normalized `movies` / `movie_genres`
   association-table design; a separate genre lookup table is not needed yet.
+- Genre values are stored as lowercase canonical values, such as `horror`.
 - Catalog-list responses will use an `items` envelope and return lightweight
   movie cards; full synopses belong to a future movie-detail endpoint.
 - Initial catalog movies must have a release year.
