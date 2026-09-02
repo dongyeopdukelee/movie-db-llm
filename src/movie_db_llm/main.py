@@ -1,7 +1,5 @@
 """FastAPI application entry point."""
 
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 from typing import Annotated, Literal
 
 import uvicorn
@@ -10,19 +8,11 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from movie_db_llm.database import get_session, initialize_database
+from movie_db_llm.database import get_session
 from movie_db_llm.genres import Genre
 from movie_db_llm.models import Movie
 
-
-@asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
-    """Initialize local application resources."""
-    initialize_database()
-    yield
-
-
-app = FastAPI(title="Movie DB LLM", lifespan=lifespan)
+app = FastAPI(title="Movie DB LLM")
 
 
 class HealthResponse(BaseModel):
