@@ -13,6 +13,21 @@ Install the locked dependencies:
 uv sync
 ```
 
+Prepare the local database:
+
+```bash
+uv run alembic upgrade head
+uv run movie-db-llm seed-demo
+```
+
+If `movie_db.sqlite3` was created before this project adopted Alembic, it has
+no migration history. If it contains only disposable demo data, move it aside
+before preparing the database:
+
+```bash
+mv movie_db.sqlite3 movie_db.pre-alembic.sqlite3
+```
+
 Run the API with automatic reload:
 
 ```bash
@@ -27,8 +42,9 @@ The API is available at `http://127.0.0.1:8000`.
 - `GET /movies` returns the locally seeded movie catalog.
 - `GET /docs` opens FastAPI's interactive API documentation.
 
-On its first startup, the application creates `movie_db.sqlite3` and seeds the
-initial catalog. Later startups do not duplicate that data.
+The API does not create or modify its schema at startup. Apply migrations before
+starting it, and use `seed-demo` only when demo catalog data is wanted. The seed
+command is idempotent, so it does not duplicate an already seeded catalog.
 
 ## Tests and checks
 
@@ -41,10 +57,14 @@ uv run pyright
 
 ## Docker Compose
 
-Build and start the API:
+For a new Docker Compose database volume, build the image, apply migrations,
+seed the demo catalog, then start the API:
 
 ```bash
-docker compose up --build
+docker compose build
+docker compose run --rm api alembic upgrade head
+docker compose run --rm api movie-db-llm seed-demo
+docker compose up
 ```
 
 Open `http://127.0.0.1:8000/docs` or call:

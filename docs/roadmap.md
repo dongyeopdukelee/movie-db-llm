@@ -3,11 +3,14 @@
 The target experience is a user request such as "I want to watch a sad movie
 with dogs in it" becoming grounded movie recommendations.
 
-## 1. Database lifecycle
+## 1. Database lifecycle — Complete
 
-- Use Alembic migrations to track schema changes.
-- Set up the database explicitly before starting the API.
-- Keep demo seed data as a separate development-only action.
+- [x] Use Alembic migrations to track schema changes. The initial
+  `create_movie_catalog` revision creates the catalog schema.
+- [x] Set up the database explicitly before starting the API with
+  `uv run alembic upgrade head`.
+- [x] Keep demo seed data as a separate development-only action with
+  `uv run movie-db-llm seed-demo`.
 
 ## 2. Catalog API
 
