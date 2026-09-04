@@ -9,12 +9,21 @@ when a decision is made, changed, or removed.
 - The first catalog will use a small, locally seeded dataset.
 - Movies and predefined genres will use a normalized `movies` / `movie_genres`
   association-table design; a separate genre lookup table is not needed yet.
-- Genre values are stored as lowercase canonical values, such as `horror`.
+- Imported genre values are stored as trimmed raw source labels without
+  canonicalization.
 - Catalog-list responses will use an `items` envelope and return lightweight
   movie cards; full synopses belong to a future movie-detail endpoint.
 - Initial catalog movies must have a release year.
-- LLM features, user accounts, external movie-data providers, and a frontend
-  are deferred until after the core movie API works.
+- Catalog ingestion will use downloadable public dataset snapshots; live
+  provider APIs and freshness automation are deferred.
+- The initial importer will parse the CMU Movie Summary Corpus source files
+  directly; generic multi-source ingestion is deferred.
+- Initial catalog imports will validate the complete dataset before writing;
+  malformed data rejects the entire import.
+- `seed-demo` remains a separate development-only fixture and does not replace
+  the imported catalog.
+- LLM features, user accounts, live external movie-data provider APIs, and a
+  frontend are deferred until after the core movie API works.
 - Future natural-language retrieval will combine structured metadata filters
   with semantic vector search; it is deferred from the initial product.
 
