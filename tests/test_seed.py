@@ -7,8 +7,8 @@ from movie_db_llm.models import Base, Movie, MovieGenre
 from movie_db_llm.seed import seed_catalog
 
 
-def test_movie_release_year_is_required() -> None:
-    """New movie records must include a release year."""
+def test_movie_release_year_is_optional() -> None:
+    """New movie records may omit a release year."""
     engine = create_engine("sqlite://")
     Base.metadata.create_all(engine)
 
@@ -17,7 +17,7 @@ def test_movie_release_year_is_required() -> None:
         column for column in columns if column["name"] == "release_year"
     )
 
-    assert release_year["nullable"] is False
+    assert release_year["nullable"] is True
 
 
 def test_seed_catalog_adds_each_movie_once() -> None:

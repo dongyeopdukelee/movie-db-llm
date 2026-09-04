@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from movie_db_llm.main import list_movies
-from movie_db_llm.models import Base
+from movie_db_llm.models import Base, Movie, MovieGenre
 from movie_db_llm.seed import seed_catalog
 
 
@@ -57,5 +57,41 @@ def test_list_movies_returns_ordered_movie_cards() -> None:
                 "release_year": 1989,
                 "genres": ["comedy", "romance"],
             },
+        ]
+    }
+
+
+def test_list_movies_allows_a_missing_release_year() -> None:
+    """Movie cards preserve an unavailable release year as null."""
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    test_session_factory = sessionmaker(bind=engine)
+
+    with test_session_factory() as session:
+        session.add(
+            Movie(
+                title="Undated Movie",
+                synopsis="A movie with an unavailable release year.",
+                release_year=None,
+                genre_assignments=[MovieGenre(genre="Drama")],
+            )
+        )
+        session.commit()
+
+    with test_session_factory() as session:
+        response = list_movies(session)
+
+    assert response.model_dump(mode="json") == {
+        "items": [
+            {
+                "id": 1,
+                "title": "Undated Movie",
+                "release_year": None,
+                "genres": ["Drama"],
+            }
         ]
     }

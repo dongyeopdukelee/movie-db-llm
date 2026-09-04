@@ -25,7 +25,7 @@ class MovieListItem(BaseModel):
 
     id: int
     title: str
-    release_year: int
+    release_year: int | None
     genres: list[str]
 
 

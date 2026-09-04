@@ -13,7 +13,7 @@ when a decision is made, changed, or removed.
   canonicalization.
 - Catalog-list responses will use an `items` envelope and return lightweight
   movie cards; full synopses belong to a future movie-detail endpoint.
-- Initial catalog movies must have a release year.
+- Catalog movie release years are optional.
 - Catalog ingestion will use downloadable public dataset snapshots; live
   provider APIs and freshness automation are deferred.
 - The initial importer will parse the CMU Movie Summary Corpus source files
