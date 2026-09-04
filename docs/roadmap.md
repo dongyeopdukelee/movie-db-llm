@@ -9,8 +9,6 @@ with dogs in it" becoming grounded movie recommendations.
   `create_movie_catalog` revision creates the catalog schema.
 - [x] Set up the database explicitly before starting the API with
   `uv run alembic upgrade head`.
-- [x] Keep demo seed data as a separate development-only action with
-  `uv run movie-db-llm seed-demo`.
 
 ## 2. Catalog API
 
@@ -18,10 +16,14 @@ with dogs in it" becoming grounded movie recommendations.
 - Add title search and genre filtering.
 - Add pagination.
 
-## 3. Catalog ingestion
+## 3. Catalog ingestion — Complete
 
-- Build an ingestion workflow for a larger movie catalog.
-- Validate imported data and record its provenance.
+- [x] Keep the CMU Movie Summary Corpus source snapshot and attribution in the
+  repository.
+- [x] Parse and validate the metadata and plot-summary source files before
+  writing any catalog rows.
+- [x] Import the validated CMU catalog into an empty database with
+  `uv run movie-db-llm import-cmu`.
 
 ## 4. Semantic retrieval
 

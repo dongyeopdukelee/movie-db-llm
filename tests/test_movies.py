@@ -6,7 +6,6 @@ from sqlalchemy.pool import StaticPool
 
 from movie_db_llm.main import list_movies
 from movie_db_llm.models import Base, Movie, MovieGenre
-from movie_db_llm.seed import seed_catalog
 
 
 def test_list_movies_returns_ordered_movie_cards() -> None:
@@ -20,7 +19,23 @@ def test_list_movies_returns_ordered_movie_cards() -> None:
     test_session_factory = sessionmaker(bind=engine)
 
     with test_session_factory() as session:
-        seed_catalog(session)
+        session.add_all(
+            [
+                Movie(
+                    title="Action Movie",
+                    synopsis="An action movie.",
+                    release_year=2020,
+                    genre_assignments=[MovieGenre(genre="Action")],
+                ),
+                Movie(
+                    title="Drama Movie",
+                    synopsis="A drama movie.",
+                    release_year=None,
+                    genre_assignments=[MovieGenre(genre="Drama")],
+                ),
+            ]
+        )
+        session.commit()
 
     with test_session_factory() as session:
         response = list_movies(session)
@@ -28,34 +43,16 @@ def test_list_movies_returns_ordered_movie_cards() -> None:
     assert response.model_dump(mode="json") == {
         "items": [
             {
-                "id": 5,
-                "title": "Free Solo",
-                "release_year": 2018,
-                "genres": ["documentary"],
-            },
-            {
                 "id": 1,
-                "title": "John Wick",
-                "release_year": 2014,
-                "genres": ["action", "thriller"],
-            },
-            {
-                "id": 3,
-                "title": "Spirited Away",
-                "release_year": 2001,
-                "genres": ["adventure", "animation", "fantasy"],
+                "title": "Action Movie",
+                "release_year": 2020,
+                "genres": ["Action"],
             },
             {
                 "id": 2,
-                "title": "The Thing",
-                "release_year": 1982,
-                "genres": ["horror", "thriller"],
-            },
-            {
-                "id": 4,
-                "title": "When Harry Met Sally...",
-                "release_year": 1989,
-                "genres": ["comedy", "romance"],
+                "title": "Drama Movie",
+                "release_year": None,
+                "genres": ["Drama"],
             },
         ]
     }

@@ -14,6 +14,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev --no-install-project
 
 COPY src ./src
+COPY data/cmu_movie_summary_corpus ./data/cmu_movie_summary_corpus
 RUN uv sync --locked --no-dev
 
 # Alembic reads these project-level files when migrations run in the container.

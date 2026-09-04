@@ -6,7 +6,7 @@ when a decision is made, changed, or removed.
 ## Product scope
 
 - The initial product is an API-first movie catalog for browsing and title search.
-- The first catalog will use a small, locally seeded dataset.
+- The first catalog will be imported from the CMU Movie Summary Corpus.
 - Movies and genres will use a normalized `movies` / `movie_genres`
   association-table design; a separate genre lookup table is not needed yet.
 - Imported genre values are stored as trimmed raw source labels without
@@ -20,8 +20,7 @@ when a decision is made, changed, or removed.
   directly; generic multi-source ingestion is deferred.
 - Initial catalog imports will validate the complete dataset before writing;
   malformed data rejects the entire import.
-- `seed-demo` remains a separate development-only fixture and does not replace
-  the imported catalog.
+- The initial CMU import requires an empty catalog.
 - LLM features, user accounts, live external movie-data provider APIs, and a
   frontend are deferred until after the core movie API works.
 - Future natural-language retrieval will combine structured metadata filters
