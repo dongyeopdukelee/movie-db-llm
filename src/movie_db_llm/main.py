@@ -9,7 +9,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from movie_db_llm.database import get_session
-from movie_db_llm.genres import Genre
 from movie_db_llm.models import Movie
 
 app = FastAPI(title="Movie DB LLM")
@@ -27,7 +26,7 @@ class MovieListItem(BaseModel):
     id: int
     title: str
     release_year: int
-    genres: list[Genre]
+    genres: list[str]
 
 
 class MovieListResponse(BaseModel):

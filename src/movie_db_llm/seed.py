@@ -3,7 +3,6 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from movie_db_llm.genres import Genre
 from movie_db_llm.models import Movie, MovieGenre
 
 
@@ -23,8 +22,8 @@ def seed_catalog(session: Session) -> None:
                 ),
                 release_year=2014,
                 genre_assignments=[
-                    MovieGenre(genre=Genre.ACTION),
-                    MovieGenre(genre=Genre.THRILLER),
+                    MovieGenre(genre="action"),
+                    MovieGenre(genre="thriller"),
                 ],
             ),
             Movie(
@@ -35,8 +34,8 @@ def seed_catalog(session: Session) -> None:
                 ),
                 release_year=1982,
                 genre_assignments=[
-                    MovieGenre(genre=Genre.HORROR),
-                    MovieGenre(genre=Genre.THRILLER),
+                    MovieGenre(genre="horror"),
+                    MovieGenre(genre="thriller"),
                 ],
             ),
             Movie(
@@ -47,9 +46,9 @@ def seed_catalog(session: Session) -> None:
                 ),
                 release_year=2001,
                 genre_assignments=[
-                    MovieGenre(genre=Genre.ADVENTURE),
-                    MovieGenre(genre=Genre.ANIMATION),
-                    MovieGenre(genre=Genre.FANTASY),
+                    MovieGenre(genre="adventure"),
+                    MovieGenre(genre="animation"),
+                    MovieGenre(genre="fantasy"),
                 ],
             ),
             Movie(
@@ -60,8 +59,8 @@ def seed_catalog(session: Session) -> None:
                 ),
                 release_year=1989,
                 genre_assignments=[
-                    MovieGenre(genre=Genre.COMEDY),
-                    MovieGenre(genre=Genre.ROMANCE),
+                    MovieGenre(genre="comedy"),
+                    MovieGenre(genre="romance"),
                 ],
             ),
             Movie(
@@ -71,7 +70,7 @@ def seed_catalog(session: Session) -> None:
                     "without ropes."
                 ),
                 release_year=2018,
-                genre_assignments=[MovieGenre(genre=Genre.DOCUMENTARY)],
+                genre_assignments=[MovieGenre(genre="documentary")],
             ),
         ]
     )

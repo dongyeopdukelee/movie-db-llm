@@ -7,7 +7,7 @@ when a decision is made, changed, or removed.
 
 - The initial product is an API-first movie catalog for browsing and title search.
 - The first catalog will use a small, locally seeded dataset.
-- Movies and predefined genres will use a normalized `movies` / `movie_genres`
+- Movies and genres will use a normalized `movies` / `movie_genres`
   association-table design; a separate genre lookup table is not needed yet.
 - Imported genre values are stored as trimmed raw source labels without
   canonicalization.

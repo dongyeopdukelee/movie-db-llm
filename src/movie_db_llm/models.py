@@ -2,21 +2,12 @@
 
 from __future__ import annotations
 
-from enum import Enum as PythonEnum
-
-from sqlalchemy import Enum, ForeignKey, String, Text
+from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-from movie_db_llm.genres import Genre
 
 
 class Base(DeclarativeBase):
     """Base class for all ORM models."""
-
-
-def enum_values(enum_class: type[PythonEnum]) -> list[str]:
-    """Return the string values SQLAlchemy should persist for an enum."""
-    return [str(member.value) for member in enum_class]
 
 
 class Movie(Base):
@@ -35,7 +26,7 @@ class Movie(Base):
 
 
 class MovieGenre(Base):
-    """A predefined genre assigned to a movie."""
+    """A raw source genre assigned to a movie."""
 
     __tablename__ = "movie_genres"
 
@@ -43,13 +34,5 @@ class MovieGenre(Base):
         ForeignKey("movies.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    genre: Mapped[Genre] = mapped_column(
-        Enum(
-            Genre,
-            native_enum=False,
-            create_constraint=True,
-            values_callable=enum_values,
-        ),
-        primary_key=True,
-    )
+    genre: Mapped[str] = mapped_column(Text, primary_key=True)
     movie: Mapped[Movie] = relationship(back_populates="genre_assignments")
