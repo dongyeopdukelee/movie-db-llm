@@ -92,3 +92,33 @@ def test_list_movies_allows_a_missing_release_year() -> None:
             }
         ]
     }
+
+
+def test_list_movies_applies_limit_and_offset() -> None:
+    """Movie pages follow the title and identifier ordering."""
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    test_session_factory = sessionmaker(bind=engine)
+
+    with test_session_factory() as session:
+        session.add_all(
+            [
+                Movie(title="Alpha", synopsis=".", release_year=2001),
+                Movie(title="Bravo", synopsis=".", release_year=2002),
+                Movie(title="Charlie", synopsis=".", release_year=2003),
+            ]
+        )
+        session.commit()
+
+    with test_session_factory() as session:
+        first_page = list_movies(session, limit=2, offset=0)
+        second_page = list_movies(session, limit=2, offset=2)
+        empty_page = list_movies(session, limit=2, offset=3)
+
+    assert [movie.title for movie in first_page.items] == ["Alpha", "Bravo"]
+    assert [movie.title for movie in second_page.items] == ["Charlie"]
+    assert empty_page.items == []

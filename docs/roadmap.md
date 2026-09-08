@@ -14,7 +14,7 @@ with dogs in it" becoming grounded movie recommendations.
 
 - Add a movie-detail endpoint with the full synopsis.
 - Add title search and genre filtering.
-- Add pagination.
+- [x] Add `limit`/`offset` pagination to catalog browsing.
 
 ## 3. Catalog ingestion — Complete
 

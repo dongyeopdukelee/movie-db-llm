@@ -3,7 +3,7 @@
 from typing import Annotated, Literal
 
 import uvicorn
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -44,12 +44,16 @@ def health_check() -> HealthResponse:
 @app.get("/movies")
 def list_movies(
     session: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> MovieListResponse:
-    """Return movies ordered by title and identifier."""
+    """Return one ordered page of movies."""
     movies = session.scalars(
         select(Movie)
         .options(selectinload(Movie.genre_assignments))
         .order_by(Movie.title, Movie.id)
+        .limit(limit)
+        .offset(offset)
     ).all()
 
     return MovieListResponse(

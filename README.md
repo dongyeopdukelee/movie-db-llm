@@ -31,7 +31,8 @@ The API is available at `http://127.0.0.1:8000`.
 ## API
 
 - `GET /health` reports whether the API is running.
-- `GET /movies` returns the imported movie catalog.
+- `GET /movies` returns an ordered page of imported movie cards. It accepts
+  `limit` (default 20, maximum 100) and `offset` (default 0) query parameters.
 - `GET /docs` opens FastAPI's interactive API documentation.
 
 The API does not create or modify its schema at startup. Apply migrations before
@@ -65,7 +66,7 @@ Open `http://127.0.0.1:8000/docs` or call:
 
 ```bash
 curl http://127.0.0.1:8000/health
-curl http://127.0.0.1:8000/movies
+curl 'http://127.0.0.1:8000/movies?limit=20&offset=0'
 ```
 
 Docker Compose stores the SQLite database in the `movie-db-data` named volume.
