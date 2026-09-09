@@ -21,10 +21,16 @@ when a decision is made, changed, or removed.
 - Initial catalog imports will validate the complete dataset before writing;
   malformed data rejects the entire import.
 - The initial CMU import requires an empty catalog.
-- LLM features, user accounts, live external movie-data provider APIs, and a
-  frontend are deferred until after the core movie API works.
-- Future natural-language retrieval will combine structured metadata filters
-  with semantic vector search; it is deferred from the initial product.
+- Natural-language recommendation will be implemented in two steps before
+  release: structured catalog retrieval first, then semantic vector search.
+- The structured-retrieval step will use an LLM to parse a user request and
+  the application to query the catalog database.
+- The LLM will not write SQL directly; the application will construct database
+  queries from constrained parsed fields.
+- The vector-search step will combine semantic synopsis retrieval with the
+  structured metadata filters.
+- User accounts, live external movie-data provider APIs, a frontend, and
+  LLM-generated recommendation explanations are deferred.
 
 ## Technology
 
