@@ -34,10 +34,7 @@ def session() -> Generator[Session]:
 def intent_data(**overrides: object) -> dict[str, object]:
     result: dict[str, object] = {
         "genres": [],
-        "released_after": None,
-        "released_since": None,
-        "released_before": None,
-        "released_until": None,
+        "year_filters": [],
         "title_keywords": [],
         "unsupported_constraints": [],
     }
@@ -102,8 +99,10 @@ def test_combines_filters_and_sends_catalog_schema(session: Session) -> None:
     add_movie(session, "Dog Days", None)
     parsed = intent_data(
         genres=["Comedy", "Drama"],
-        released_since=1990,
-        released_until=1999,
+        year_filters=[
+            {"comparison": "since", "year": 1990},
+            {"comparison": "until", "year": 1999},
+        ],
         title_keywords=["DOG", "days"],
     )
 
@@ -150,31 +149,72 @@ def test_combines_filters_and_sends_catalog_schema(session: Session) -> None:
 @pytest.mark.parametrize(
     ("bounds", "expected", "interpreted_bounds"),
     [
-        ({"released_since": 2000}, ["New"], (2000, None, True, True)),
-        ({"released_until": 1995}, ["Old"], (None, 1995, True, True)),
         (
-            {"released_since": 1995, "released_until": 1995},
+            [{"comparison": "since", "year": 2000}],
+            ["New"],
+            (2000, None, True, True),
+        ),
+        (
+            [{"comparison": "since", "year": 1995}],
+            ["New", "Old"],
+            (1995, None, True, True),
+        ),
+        (
+            [{"comparison": "until", "year": 1995}],
+            ["Old"],
+            (None, 1995, True, True),
+        ),
+        (
+            [{"comparison": "in", "year": 1995}],
             ["Old"],
             (1995, 1995, True, True),
         ),
-        ({"released_after": 1995}, ["New"], (1995, None, False, True)),
-        ({"released_before": 2005}, ["Old"], (None, 2005, True, False)),
-        ({"released_after": 2005}, [], (2005, None, False, True)),
-        ({"released_before": 1995}, [], (None, 1995, True, False)),
-        ({}, ["New", "Old", "Undated"], (None, None, True, True)),
+        (
+            [
+                {"comparison": "until", "year": 1995},
+                {"comparison": "since", "year": 1995},
+            ],
+            ["Old"],
+            (1995, 1995, True, True),
+        ),
+        (
+            [{"comparison": "after", "year": 1995}],
+            ["New"],
+            (1995, None, False, True),
+        ),
+        (
+            [{"comparison": "before", "year": 2005}],
+            ["Old"],
+            (None, 2005, True, False),
+        ),
+        (
+            [{"comparison": "after", "year": 2005}],
+            [],
+            (2005, None, False, True),
+        ),
+        (
+            [{"comparison": "before", "year": 1995}],
+            [],
+            (None, 1995, True, False),
+        ),
+        ([], ["New", "Old", "Undated"], (None, None, True, True)),
     ],
 )
 def test_optional_year_bounds(
     session: Session,
-    bounds: dict[str, int],
+    bounds: list[dict[str, object]],
     expected: list[str],
     interpreted_bounds: tuple[int | None, int | None, bool, bool],
 ) -> None:
-    """API year semantics preserve literal bounds and exclude undated rows."""
+    """The API contract includes since/until boundaries and limits in to a year.
+
+    Seeded years are the oracle: wrong operators admit or drop known cards;
+    the adapter must also expose the literal bounds and exclude undated rows.
+    """
     add_movie(session, "Old", 1995)
     add_movie(session, "New", 2005)
     add_movie(session, "Undated", None)
-    parsed = intent_data(genres=["Comedy"], **bounds)
+    parsed = intent_data(genres=["Comedy"], year_filters=bounds)
     with recommendation_client(
         session, lambda _: model_reply(parsed)
     ) as client:
@@ -247,8 +287,10 @@ def test_title_keywords_match_literal_unicode_case_pairs(
     filters: dict[str, object] = (
         {
             "genres": ["Comedy", "Drama"],
-            "released_since": 1990,
-            "released_until": 1999,
+            "year_filters": [
+                {"comparison": "since", "year": 1990},
+                {"comparison": "until", "year": 1999},
+            ],
         }
         if combined_filters
         else {}
@@ -282,7 +324,10 @@ def test_title_keywords_match_literal_unicode_case_pairs(
 
 def test_no_matches_does_not_relax_filters(session: Session) -> None:
     add_movie(session, "Comedy")
-    parsed = intent_data(genres=["Comedy"], released_since=2020)
+    parsed = intent_data(
+        genres=["Comedy"],
+        year_filters=[{"comparison": "since", "year": 2020}],
+    )
     with recommendation_client(
         session, lambda _: model_reply(parsed)
     ) as client:
@@ -318,15 +363,50 @@ def test_invalid_request_never_calls_model(
     "parsed",
     [
         intent_data(genres=["Invented genre"]),
-        intent_data(released_since=2000, released_until=1990),
-        intent_data(released_since="1990"),
-        intent_data(released_since=True),
-        intent_data(released_after="1990"),
+        intent_data(
+            year_filters=[
+                {"comparison": "since", "year": 2000},
+                {"comparison": "until", "year": 1990},
+            ]
+        ),
+        intent_data(year_filters=[{"comparison": "since", "year": "1990"}]),
+        intent_data(year_filters=[{"comparison": "since", "year": True}]),
+        intent_data(year_filters=[{"comparison": "after", "year": "1990"}]),
+        intent_data(year_filters=[{"comparison": "around", "year": 1990}]),
+        intent_data(year_filters=[{"comparison": "in"}]),
+        intent_data(
+            year_filters=[{"comparison": "in", "year": 1990, "extra": 1}]
+        ),
+        intent_data(year_filters=[{"comparison": "in", "year": 0}]),
+        intent_data(year_filters=[{"comparison": "in", "year": 10000}]),
+        intent_data(year_filters=[{"comparison": "in", "year": 1990}] * 3),
         intent_data(title_keywords=[""]),
         intent_data(title_keywords=["x"] * 11),
         intent_data(sql="SELECT * FROM movies"),
-        intent_data(released_after=1990, released_since=1995),
-        intent_data(released_before=2000, released_until=1995),
+        intent_data(
+            year_filters=[
+                {"comparison": "after", "year": 1990},
+                {"comparison": "since", "year": 1995},
+            ]
+        ),
+        intent_data(
+            year_filters=[
+                {"comparison": "before", "year": 2000},
+                {"comparison": "until", "year": 1995},
+            ]
+        ),
+        intent_data(
+            year_filters=[
+                {"comparison": "in", "year": 1990},
+                {"comparison": "since", "year": 1990},
+            ]
+        ),
+        intent_data(
+            year_filters=[
+                {"comparison": "before", "year": 2000},
+                {"comparison": "in", "year": 1990},
+            ]
+        ),
         {"genres": []},
     ],
 )
@@ -353,7 +433,12 @@ def test_rejects_invalid_model_intent(
             },
         ),
         httpx.Response(200, json={"message": {"content": "{}"}}),
-        model_reply(intent_data(released_since=1990), done_reason="length"),
+        model_reply(
+            intent_data(
+                year_filters=[{"comparison": "since", "year": 1990}]
+            ),
+            done_reason="length",
+        ),
     ],
 )
 def test_rejects_malformed_or_truncated_response(
