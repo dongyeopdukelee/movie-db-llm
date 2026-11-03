@@ -268,17 +268,27 @@ def test_title_keywords_are_literal_parameters(
         ("AMÉLIE", "amélie", "Amelie"),
         ("Straße", "STRASSE", "Strase"),
         ("Amélie 100%_/", "AMÉLIE 100%_/", "Amélie 100xx/"),
+        (" love ", " LOVE ", "Beloved"),
+        (" love", " LOVE", "Beloved"),
+        ("love ", "LOVE ", "Beloved"),
+        ("\tlove\t", "\tLOVE\t", "Beloved"),
+        ("\nlove\n", "\nLOVE\n", "Beloved"),
+        (" " + "x" * 198 + " ", " " + "X" * 198 + " ", "x" * 197),
     ],
 )
 @pytest.mark.parametrize("combined_filters", [False, True])
-def test_title_keywords_match_literal_unicode_case_pairs(
+def test_title_keywords_match_literal_case_insensitive_substrings(
     session: Session,
     title: str,
     keyword: str,
     nonmatch: str,
     combined_filters: bool,
 ) -> None:
-    """Case pairs match; accents, literal symbols, and AND filters matter."""
+    """Literal matching preserves whitespace under the catalog contract.
+
+    Seeded titles are the oracle: trimming admits Beloved, dropping accents
+    or escaping admits near matches, and relaxing AND admits extra cards.
+    """
     add_movie(session, f"The {title} Story")
     add_movie(session, f"The {title} Story", 2005)
     add_movie(session, f"The {title} Story", genres=("Drama",))
@@ -381,6 +391,7 @@ def test_invalid_request_never_calls_model(
         intent_data(year_filters=[{"comparison": "in", "year": 10000}]),
         intent_data(year_filters=[{"comparison": "in", "year": 1990}] * 3),
         intent_data(title_keywords=[""]),
+        intent_data(title_keywords=["x" * 201]),
         intent_data(title_keywords=["x"] * 11),
         intent_data(sql="SELECT * FROM movies"),
         intent_data(

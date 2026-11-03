@@ -19,6 +19,7 @@ RECOMMENDATION_LIMIT = 10
 IntentText = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
 ]
+TitleKeyword = Annotated[str, StringConstraints(min_length=1, max_length=200)]
 Year = Annotated[int, Field(ge=1, le=9999)]
 
 
@@ -45,7 +46,7 @@ class MovieIntent(BaseModel):
     year_max: Year | None
     year_min_inclusive: bool
     year_max_inclusive: bool
-    title_keywords: Annotated[list[IntentText], Field(max_length=10)]
+    title_keywords: Annotated[list[TitleKeyword], Field(max_length=10)]
     unsupported_constraints: Annotated[list[IntentText], Field(max_length=10)]
 
     @model_validator(mode="after")

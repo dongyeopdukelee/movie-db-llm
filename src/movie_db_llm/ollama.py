@@ -17,6 +17,7 @@ from movie_db_llm.recommendations import (
     InvalidModelResponseError,
     ModelUnavailableError,
     MovieIntent,
+    TitleKeyword,
     Year,
 )
 
@@ -156,7 +157,7 @@ class _OllamaIntent(BaseModel):
     unsupported_constraints: Annotated[list[IntentText], Field(max_length=10)]
     genres: Annotated[list[IntentText], Field(max_length=10)]
     year_filters: Annotated[list[_YearFilter], Field(max_length=2)]
-    title_keywords: Annotated[list[IntentText], Field(max_length=10)]
+    title_keywords: Annotated[list[TitleKeyword], Field(max_length=10)]
 
     def to_intent(self) -> MovieIntent:
         """Copy literal bounds and apply comparison semantics in code."""
