@@ -121,7 +121,9 @@ uv run pyright
 GitHub Actions runs these checks for pull requests and pushes to `main`. It
 also builds the production image, creates a disposable Docker Compose catalog,
 and checks the running API over HTTP. The workflow does not download the local
-Ollama model or call recommendation endpoints.
+Ollama model. Python recommendation tests use mocked model responses; the
+Compose smoke test only checks health and catalog browsing without starting
+Ollama.
 
 ## Docker Compose
 
