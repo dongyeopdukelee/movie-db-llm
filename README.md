@@ -50,6 +50,15 @@ uv run ruff format --check .
 uv run pyright
 ```
 
+The test suite includes focused unit and data-layer tests plus end-to-end API
+tests. The end-to-end tests apply migrations to a temporary SQLite database,
+start Uvicorn, and make real HTTP requests.
+
+When behavior is added, changed, or removed, update the relevant tests in the
+same change. Add end-to-end coverage for user-visible API behavior where it is
+practical, keep focused unit tests for isolated logic, and remove tests that
+only cover behavior that no longer exists.
+
 ## Docker Compose
 
 For a new Docker Compose database volume, build the image, apply migrations,
