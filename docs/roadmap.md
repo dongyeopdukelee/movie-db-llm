@@ -25,19 +25,29 @@ with dogs in it" becoming grounded movie recommendations.
 - [x] Import the validated CMU catalog into an empty database with
   `uv run movie-db-llm import-cmu`.
 
-## 4. Semantic retrieval
+## 4. Structured retrieval — Complete
+
+- [x] Parse natural-language movie requests locally with Qwen3.5 2B via Ollama.
+- [x] Validate constrained genre, release-year, and title-keyword intent.
+- [x] Build catalog queries in the application and return up to 10 movie cards
+  from `POST /recommendations`.
+- [x] Reject unsupported constraints and handle local model failures.
+
+## 5. Semantic retrieval
 
 - Generate embeddings for movie synopses.
 - Add vector search over the catalog.
 - Combine semantic retrieval with structured metadata filters.
 
-## 5. LLM recommendations
+## 6. LLM recommendations
 
-- Add an API endpoint for natural-language movie requests.
-- Use an LLM to interpret requests and explain retrieved recommendations.
+- [x] Add an API endpoint for natural-language movie requests.
+- [x] Use an LLM to interpret requests into structured catalog filters.
+- Extend interpretation and retrieval to semantic synopsis requests.
 - Ground responses in catalog results.
+- Recommendation explanations remain deferred.
 
-## 6. Evaluation and operations
+## 7. Evaluation and operations
 
 - Create a representative set of recommendation queries.
 - Measure retrieval quality, cost, and latency.

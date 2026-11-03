@@ -1,0 +1,328 @@
+"""Exercise the HTTP boundary, local model adapter, and real SQL retrieval."""
+
+import json
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
+
+import httpx
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
+
+from movie_db_llm.database import get_session
+from movie_db_llm.main import app
+from movie_db_llm.models import Base, Movie, MovieGenre
+from movie_db_llm.ollama import OllamaIntentParser, get_intent_parser
+
+
+@pytest.fixture
+def session() -> Generator[Session]:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        yield session
+    engine.dispose()
+
+
+def intent_data(**overrides: object) -> dict[str, object]:
+    result: dict[str, object] = {
+        "genres": [],
+        "year_min": None,
+        "year_max": None,
+        "year_min_inclusive": True,
+        "year_max_inclusive": True,
+        "title_keywords": [],
+        "unsupported_constraints": [],
+    }
+    result.update(overrides)
+    return result
+
+
+def model_reply(
+    intent: dict[str, object], *, done_reason: str = "stop"
+) -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "message": {"content": json.dumps(intent)},
+            "done": True,
+            "done_reason": done_reason,
+        },
+    )
+
+
+@contextmanager
+def recommendation_client(
+    session: Session,
+    handler: Callable[[httpx.Request], httpx.Response],
+) -> Generator[httpx.Client]:
+    previous_overrides = app.dependency_overrides.copy()
+    with httpx.Client(
+        base_url="http://ollama.test", transport=httpx.MockTransport(handler)
+    ) as model_client:
+        parser = OllamaIntentParser(model_client)
+        app.dependency_overrides[get_session] = lambda: session
+        app.dependency_overrides[get_intent_parser] = lambda: parser
+        try:
+            with TestClient(app) as client:
+                yield client
+        finally:
+            app.dependency_overrides = previous_overrides
+
+
+def add_movie(
+    session: Session,
+    title: str,
+    year: int | None = 1995,
+    genres: tuple[str, ...] = ("Comedy", "Drama"),
+) -> None:
+    session.add(
+        Movie(
+            title=title,
+            synopsis="This full synopsis must not appear on movie cards.",
+            release_year=year,
+            genre_assignments=[MovieGenre(genre=genre) for genre in genres],
+        )
+    )
+    session.commit()
+
+
+def test_combines_filters_and_sends_catalog_schema(session: Session) -> None:
+    add_movie(session, "Dog Days")
+    add_movie(session, "Dog Days", 2005)
+    add_movie(session, "Dog Show")
+    add_movie(session, "Dog Days", genres=("Drama",))
+    add_movie(session, "Dog Days", None)
+    parsed = intent_data(
+        genres=["Comedy", "Drama"],
+        year_min=1990,
+        year_max=1999,
+        title_keywords=["DOG", "days"],
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        assert request.url.path == "/api/chat"
+        assert payload["model"] == "qwen3.5:2b"
+        assert payload["stream"] is False
+        assert payload["think"] is False
+        assert payload["format"]["additionalProperties"] is False
+        assert '["Comedy", "Drama"]' in payload["messages"][0]["content"]
+        assert (
+            payload["messages"][1]["content"] == "90s comedy dramas, Dog Days"
+        )
+        return model_reply(parsed)
+
+    with recommendation_client(session, handler) as client:
+        response = client.post(
+            "/recommendations", json={"query": "90s comedy dramas, Dog Days"}
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "intent": parsed,
+        "items": [
+            {
+                "id": 1,
+                "title": "Dog Days",
+                "release_year": 1995,
+                "genres": ["Comedy", "Drama"],
+            }
+        ],
+    }
+
+
+@pytest.mark.parametrize(
+    ("bounds", "expected"),
+    [
+        ({"year_min": 2000}, ["New"]),
+        ({"year_max": 1995}, ["Old"]),
+        ({"year_min": 1995, "year_max": 1995}, ["Old"]),
+        ({"year_min": 1995, "year_min_inclusive": False}, ["New"]),
+        ({"year_max": 2005, "year_max_inclusive": False}, ["Old"]),
+        ({"year_min": 2005, "year_min_inclusive": False}, []),
+        ({"year_max": 1995, "year_max_inclusive": False}, []),
+        ({}, ["New", "Old", "Undated"]),
+    ],
+)
+def test_optional_year_bounds(
+    session: Session, bounds: dict[str, int | bool], expected: list[str]
+) -> None:
+    add_movie(session, "Old", 1995)
+    add_movie(session, "New", 2005)
+    add_movie(session, "Undated", None)
+    parsed = intent_data(genres=["Comedy"], **bounds)
+    with recommendation_client(
+        session, lambda _: model_reply(parsed)
+    ) as client:
+        response = client.post("/recommendations", json={"query": "comedies"})
+    assert response.status_code == 200
+    assert [item["title"] for item in response.json()["items"]] == expected
+
+
+def test_caps_and_orders_cards_without_duplicates(session: Session) -> None:
+    for number in reversed(range(15)):
+        add_movie(session, f"Comedy {number:02}")
+    parsed = intent_data(genres=["Comedy", "Drama"])
+    with recommendation_client(
+        session, lambda _: model_reply(parsed)
+    ) as client:
+        response = client.post("/recommendations", json={"query": "comedies"})
+    assert response.status_code == 200
+    assert [item["title"] for item in response.json()["items"]] == [
+        f"Comedy {number:02}" for number in range(10)
+    ]
+
+
+@pytest.mark.parametrize("keyword", ["100%_", "' OR 1=1 --"])
+def test_title_keywords_are_literal_parameters(
+    session: Session, keyword: str
+) -> None:
+    add_movie(session, f"The {keyword} Story")
+    add_movie(session, "The 100xx Story")
+    parsed = intent_data(title_keywords=[keyword])
+    with recommendation_client(
+        session, lambda _: model_reply(parsed)
+    ) as client:
+        response = client.post("/recommendations", json={"query": keyword})
+    assert response.status_code == 200
+    assert [item["title"] for item in response.json()["items"]] == [
+        f"The {keyword} Story"
+    ]
+
+
+def test_no_matches_does_not_relax_filters(session: Session) -> None:
+    add_movie(session, "Comedy")
+    parsed = intent_data(genres=["Comedy"], year_min=2020)
+    with recommendation_client(
+        session, lambda _: model_reply(parsed)
+    ) as client:
+        response = client.post(
+            "/recommendations", json={"query": "new comedy"}
+        )
+    assert response.status_code == 200
+    assert response.json()["items"] == []
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {},
+        {"query": " "},
+        {"query": "x" * 1001},
+        {"query": 123},
+        {"query": "comedy", "limit": 100},
+    ],
+)
+def test_invalid_request_never_calls_model(
+    session: Session, body: dict[str, object]
+) -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        pytest.fail("Invalid input must be rejected before model inference.")
+
+    with recommendation_client(session, handler) as client:
+        response = client.post("/recommendations", json=body)
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "parsed",
+    [
+        intent_data(genres=["Invented genre"]),
+        intent_data(year_min=2000, year_max=1990),
+        intent_data(year_min="1990"),
+        intent_data(year_min=True),
+        intent_data(year_min_inclusive="false"),
+        intent_data(title_keywords=[""]),
+        intent_data(title_keywords=["x"] * 11),
+        intent_data(sql="SELECT * FROM movies"),
+        {"genres": []},
+    ],
+)
+def test_rejects_invalid_model_intent(
+    session: Session, parsed: dict[str, object]
+) -> None:
+    with recommendation_client(
+        session, lambda _: model_reply(parsed)
+    ) as client:
+        response = client.post("/recommendations", json={"query": "movies"})
+    assert response.status_code == 502
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx.Response(200, content="not JSON"),
+        httpx.Response(
+            200,
+            json={
+                "message": {"content": "not JSON"},
+                "done": True,
+                "done_reason": "stop",
+            },
+        ),
+        httpx.Response(200, json={"message": {"content": "{}"}}),
+        model_reply(intent_data(year_min=1990), done_reason="length"),
+    ],
+)
+def test_rejects_malformed_or_truncated_response(
+    session: Session, response: httpx.Response
+) -> None:
+    with recommendation_client(session, lambda _: response) as client:
+        result = client.post("/recommendations", json={"query": "90s movies"})
+    assert result.status_code == 502
+
+
+@pytest.mark.parametrize("status", [404, 500, 503])
+def test_model_service_failures_are_actionable(
+    session: Session, status: int
+) -> None:
+    with recommendation_client(
+        session,
+        lambda _: httpx.Response(status, json={"error": "unavailable"}),
+    ) as client:
+        response = client.post("/recommendations", json={"query": "comedies"})
+    assert response.status_code == 503
+    assert "Start Ollama" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("error", [httpx.ConnectError, httpx.ReadTimeout])
+def test_model_connection_errors(
+    session: Session, error: type[httpx.RequestError]
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise error("Model unavailable", request=request)
+
+    with recommendation_client(session, handler) as client:
+        response = client.post("/recommendations", json={"query": "comedies"})
+    assert response.status_code == 503
+
+
+@pytest.mark.parametrize(
+    "parsed",
+    [
+        intent_data(),
+        intent_data(
+            genres=["Comedy"], unsupported_constraints=["plot about dogs"]
+        ),
+    ],
+)
+def test_unsupported_or_empty_intent_returns_no_partial_matches(
+    session: Session, parsed: dict[str, object]
+) -> None:
+    add_movie(session, "Comedy")
+    with recommendation_client(
+        session, lambda _: model_reply(parsed)
+    ) as client:
+        response = client.post(
+            "/recommendations", json={"query": "dog movies"}
+        )
+    assert response.status_code == 422
+    assert response.json()["detail"]["unsupported_constraints"]
+    assert "items" not in response.json()
