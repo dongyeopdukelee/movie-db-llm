@@ -2,3 +2,4 @@
 __pycache__/
 .pytest_cache/
 movie_db.sqlite3
+.tools/

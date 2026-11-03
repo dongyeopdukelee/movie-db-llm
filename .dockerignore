@@ -5,3 +5,5 @@
 __pycache__
 *.py[cod]
 movie_db.sqlite3
+.tools
+.lavish

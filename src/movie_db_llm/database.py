@@ -14,12 +14,15 @@ SessionLocal = sessionmaker(bind=engine)
 
 
 @event.listens_for(engine, "connect")
-def enable_sqlite_foreign_keys(
+def configure_sqlite_connection(
     database_connection: SQLiteConnection,
     _: ConnectionPoolEntry,
 ) -> None:
-    """Enable SQLite foreign-key enforcement for each new connection."""
+    """Enable foreign keys and Unicode case folding on each connection."""
     database_connection.execute("PRAGMA foreign_keys = ON")
+    database_connection.create_function(
+        "casefold", 1, str.casefold, deterministic=True
+    )
 
 
 def get_session() -> Generator[Session]:
