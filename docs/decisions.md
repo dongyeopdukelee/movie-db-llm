@@ -25,6 +25,22 @@ when a decision is made, changed, or removed.
   release: structured catalog retrieval first, then semantic vector search.
 - The structured-retrieval step will use an LLM to parse a user request and
   the application to query the catalog database.
+- The request-parsing LLM will be Qwen3.5 2B, running locally through Ollama
+  using the `qwen3.5:2b` model tag.
+- Structured request intent will support catalog genre labels, an optional
+  release-year range, and title keywords.
+- Each recommendation request will return at most 10 movie cards.
+- Structured filters are combined with AND. Title keywords match literal,
+  case-insensitive substrings. Intent records year bounds and whether each is
+  inclusive; database comparisons apply exclusivity without model arithmetic.
+  Movies without a release year cannot match a year filter.
+- Model output pairs literal years with comparisons (`after`, `before`,
+  `since`, `until`, `in`); the adapter maps them to the public year bounds and
+  inclusive flags without arithmetic. `in` sets both inclusive bounds to the
+  same year; `until` includes its year.
+- Structured-retrieval results are ordered by title and identifier, without
+  relevance ranking. Unsupported constraints or requests without any supported
+  filters are rejected instead of returning arbitrary or partial matches.
 - The LLM will not write SQL directly; the application will construct database
   queries from constrained parsed fields.
 - The vector-search step will combine semantic synopsis retrieval with the
@@ -47,3 +63,9 @@ when a decision is made, changed, or removed.
 - Docker Compose will define and run the local application stack.
 - Docker Compose will provide `DATABASE_URL` and persist the SQLite database in
   a named Docker volume.
+- GitHub Actions will provide continuous integration for pull requests and
+  `main` pushes. It will run the Python test suite, Ruff, Pyright, and a
+  disposable Docker Compose API smoke test. Continuous deployment is deferred
+  until the project has a live deployment target.
+- Ollama will serve local model inference over HTTP. Docker Compose will run
+  it as a CPU service with persistent model storage; GPU setup is deferred.
