@@ -7,11 +7,11 @@ from contextlib import contextmanager
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from movie_db_llm.database import get_session
+from movie_db_llm.database import configure_sqlite_connection, get_session
 from movie_db_llm.main import app
 from movie_db_llm.models import Base, Movie, MovieGenre
 from movie_db_llm.ollama import OllamaIntentParser, get_intent_parser
@@ -24,6 +24,7 @@ def session() -> Generator[Session]:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+    event.listen(engine, "connect", configure_sqlite_connection)
     Base.metadata.create_all(engine)
     with Session(engine) as session:
         yield session
@@ -195,6 +196,53 @@ def test_title_keywords_are_literal_parameters(
     assert [item["title"] for item in response.json()["items"]] == [
         f"The {keyword} Story"
     ]
+
+
+@pytest.mark.parametrize(
+    ("title", "keyword", "nonmatch"),
+    [
+        ("Amélie", "AMÉLIE", "Amelie"),
+        ("AMÉLIE", "amélie", "Amelie"),
+        ("Straße", "STRASSE", "Strase"),
+        ("Amélie 100%_/", "AMÉLIE 100%_/", "Amélie 100xx/"),
+    ],
+)
+@pytest.mark.parametrize("combined_filters", [False, True])
+def test_title_keywords_match_literal_unicode_case_pairs(
+    session: Session,
+    title: str,
+    keyword: str,
+    nonmatch: str,
+    combined_filters: bool,
+) -> None:
+    """Case pairs match; accents, literal symbols, and AND filters matter."""
+    add_movie(session, f"The {title} Story")
+    add_movie(session, f"The {title} Story", 2005)
+    add_movie(session, f"The {title} Story", genres=("Drama",))
+    add_movie(session, f"The {nonmatch} Story")
+    add_movie(session, f"The {title} Film")
+    filters: dict[str, object] = (
+        {"genres": ["Comedy", "Drama"], "year_min": 1990, "year_max": 1999}
+        if combined_filters
+        else {}
+    )
+    parsed = intent_data(title_keywords=[keyword, "STORY"], **filters)
+    with recommendation_client(
+        session, lambda _: model_reply(parsed)
+    ) as client:
+        response = client.post(
+            "/recommendations", json={"query": f"title contains {keyword}"}
+        )
+
+    assert response.status_code == 200
+    assert response.json()["intent"] == parsed
+    assert [item["id"] for item in response.json()["items"]] == (
+        [1] if combined_filters else [1, 2, 3]
+    )
+    assert all(
+        item["title"] == f"The {title} Story"
+        for item in response.json()["items"]
+    )
 
 
 def test_no_matches_does_not_relax_filters(session: Session) -> None:

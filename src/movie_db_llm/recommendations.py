@@ -10,7 +10,7 @@ from pydantic import (
     StringConstraints,
     model_validator,
 )
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, load_only, selectinload
 
 from movie_db_llm.models import Movie, MovieGenre
@@ -134,7 +134,9 @@ def recommend_movies(
         )
     for keyword in intent.title_keywords:
         statement = statement.where(
-            Movie.title.icontains(keyword, autoescape=True)
+            func.casefold(Movie.title).contains(
+                keyword.casefold(), autoescape=True
+            )
         )
 
     movies = session.scalars(
