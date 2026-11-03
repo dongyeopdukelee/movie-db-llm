@@ -434,9 +434,7 @@ def test_rejects_invalid_model_intent(
         ),
         httpx.Response(200, json={"message": {"content": "{}"}}),
         model_reply(
-            intent_data(
-                year_filters=[{"comparison": "since", "year": 1990}]
-            ),
+            intent_data(year_filters=[{"comparison": "since", "year": 1990}]),
             done_reason="length",
         ),
     ],
