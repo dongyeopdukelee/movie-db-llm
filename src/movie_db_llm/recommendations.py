@@ -36,7 +36,7 @@ class RecommendationRequest(BaseModel):
 
 
 class MovieIntent(BaseModel):
-    """The complete allowlist of fields an LLM may return."""
+    """Validated retrieval intent exposed in the public API response."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
 

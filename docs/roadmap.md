@@ -41,10 +41,10 @@ with dogs in it" becoming grounded movie recommendations.
 
 ## 6. LLM recommendations
 
-- [x] Add an API endpoint for natural-language movie requests.
-- [x] Use an LLM to interpret requests into structured catalog filters.
+Build on the completed structured-retrieval step above.
+
 - Extend interpretation and retrieval to semantic synopsis requests.
-- Ground responses in catalog results.
+- Ground semantic responses in retrieved catalog results.
 - Recommendation explanations remain deferred.
 
 ## 7. Evaluation and operations

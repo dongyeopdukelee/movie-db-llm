@@ -122,12 +122,13 @@ def _messages(query: str, genres: list[str]) -> list[dict[str, str]]:
         {"role": "system", "content": SYSTEM_PROMPT + json.dumps(genres)}
     ]
     for example, filters in EXAMPLES:
-        intent = {
+        intent: dict[str, object] = {
             "unsupported_constraints": [],
             "genres": [],
             "year_filters": [],
             "title_keywords": [],
-        } | filters
+        }
+        intent.update(filters)
         messages.extend(
             [
                 {"role": "user", "content": example},

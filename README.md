@@ -1,6 +1,7 @@
 # Movie DB LLM
 
-A small FastAPI movie-catalog API built as a system-design learning project.
+A small FastAPI movie-catalog API with local natural-language retrieval,
+built as a system-design learning project.
 
 See the [product roadmap](docs/roadmap.md) for the planned path from a catalog
 API to grounded natural-language movie recommendations.
@@ -85,9 +86,7 @@ The response uses an `items` envelope with lightweight movie cards and an
 `unsupported_constraints`. All requested genres and title keywords must match.
 Title matching uses literal, case-insensitive substrings. Exact years, decades,
 since, and until use inclusive year bounds; before and after use exclusive
-bounds. The model copies the year and the database applies the comparison,
-avoiding year arithmetic in model output. Undated movies only match when no
-year filter is requested.
+bounds. Undated movies only match when no year filter is requested.
 Results are ordered by title and identifier, with no relevance ranking yet.
 No matching movies returns an empty `items` list without relaxing filters.
 
