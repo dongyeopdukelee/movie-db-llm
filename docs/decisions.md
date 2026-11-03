@@ -63,5 +63,9 @@ when a decision is made, changed, or removed.
 - Docker Compose will define and run the local application stack.
 - Docker Compose will provide `DATABASE_URL` and persist the SQLite database in
   a named Docker volume.
+- GitHub Actions will provide continuous integration for pull requests and
+  `main` pushes. It will run the Python test suite, Ruff, Pyright, and a
+  disposable Docker Compose API smoke test. Continuous deployment is deferred
+  until the project has a live deployment target.
 - Ollama will serve local model inference over HTTP. Docker Compose will run
   it as a CPU service with persistent model storage; GPU setup is deferred.

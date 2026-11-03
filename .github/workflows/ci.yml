@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Python checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      - name: Install locked development dependencies
+        run: uv sync --locked --all-groups
+
+      - name: Run tests
+        run: uv run pytest
+
+      - name: Check formatting
+        run: uv run ruff format --check .
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Type-check
+        run: uv run pyright
+
+  docker-compose:
+    name: Docker Compose API smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Build the API image
+        run: docker compose build api
+
+      - name: Apply database migrations
+        run: docker compose run --rm --no-deps api alembic upgrade head
+
+      - name: Import the catalog
+        run: docker compose run --rm --no-deps api movie-db-llm import-cmu
+
+      - name: Start the API without Ollama
+        run: docker compose up --detach --no-deps api
+
+      - name: Verify the running API over HTTP
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error \
+              http://127.0.0.1:8000/health; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              exit 1
+            fi
+            sleep 1
+          done
+          python - <<'PY'
+          import json
+          from urllib.request import urlopen
+
+          with urlopen("http://127.0.0.1:8000/movies?limit=1") as response:
+              assert response.status == 200
+              assert json.load(response)["items"]
+          PY
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Remove disposable containers and volumes
+        if: always()
+        run: docker compose down --volumes --remove-orphans
