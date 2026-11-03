@@ -34,6 +34,9 @@ when a decision is made, changed, or removed.
   case-insensitive substrings. Intent records year bounds and whether each is
   inclusive; database comparisons apply exclusivity without model arithmetic.
   Movies without a release year cannot match a year filter.
+- Model output names year comparisons (`released_after`, `released_before`,
+  `released_since`, `released_until`); the adapter maps them to the public
+  year bounds and inclusive flags without arithmetic. Until includes its year.
 - Structured-retrieval results are ordered by title and identifier, without
   relevance ranking. Unsupported constraints or requests without any supported
   filters are rejected instead of returning arbitrary or partial matches.

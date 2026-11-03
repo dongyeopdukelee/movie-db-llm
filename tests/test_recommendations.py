@@ -34,10 +34,10 @@ def session() -> Generator[Session]:
 def intent_data(**overrides: object) -> dict[str, object]:
     result: dict[str, object] = {
         "genres": [],
-        "year_min": None,
-        "year_max": None,
-        "year_min_inclusive": True,
-        "year_max_inclusive": True,
+        "released_after": None,
+        "released_since": None,
+        "released_before": None,
+        "released_until": None,
         "title_keywords": [],
         "unsupported_constraints": [],
     }
@@ -102,8 +102,8 @@ def test_combines_filters_and_sends_catalog_schema(session: Session) -> None:
     add_movie(session, "Dog Days", None)
     parsed = intent_data(
         genres=["Comedy", "Drama"],
-        year_min=1990,
-        year_max=1999,
+        released_since=1990,
+        released_until=1999,
         title_keywords=["DOG", "days"],
     )
 
@@ -116,7 +116,7 @@ def test_combines_filters_and_sends_catalog_schema(session: Session) -> None:
         assert payload["format"]["additionalProperties"] is False
         assert '["Comedy", "Drama"]' in payload["messages"][0]["content"]
         assert (
-            payload["messages"][1]["content"] == "90s comedy dramas, Dog Days"
+            payload["messages"][-1]["content"] == "90s comedy dramas, Dog Days"
         )
         return model_reply(parsed)
 
@@ -127,7 +127,15 @@ def test_combines_filters_and_sends_catalog_schema(session: Session) -> None:
 
     assert response.status_code == 200
     assert response.json() == {
-        "intent": parsed,
+        "intent": {
+            "genres": ["Comedy", "Drama"],
+            "year_min": 1990,
+            "year_max": 1999,
+            "year_min_inclusive": True,
+            "year_max_inclusive": True,
+            "title_keywords": ["DOG", "days"],
+            "unsupported_constraints": [],
+        },
         "items": [
             {
                 "id": 1,
@@ -140,21 +148,29 @@ def test_combines_filters_and_sends_catalog_schema(session: Session) -> None:
 
 
 @pytest.mark.parametrize(
-    ("bounds", "expected"),
+    ("bounds", "expected", "interpreted_bounds"),
     [
-        ({"year_min": 2000}, ["New"]),
-        ({"year_max": 1995}, ["Old"]),
-        ({"year_min": 1995, "year_max": 1995}, ["Old"]),
-        ({"year_min": 1995, "year_min_inclusive": False}, ["New"]),
-        ({"year_max": 2005, "year_max_inclusive": False}, ["Old"]),
-        ({"year_min": 2005, "year_min_inclusive": False}, []),
-        ({"year_max": 1995, "year_max_inclusive": False}, []),
-        ({}, ["New", "Old", "Undated"]),
+        ({"released_since": 2000}, ["New"], (2000, None, True, True)),
+        ({"released_until": 1995}, ["Old"], (None, 1995, True, True)),
+        (
+            {"released_since": 1995, "released_until": 1995},
+            ["Old"],
+            (1995, 1995, True, True),
+        ),
+        ({"released_after": 1995}, ["New"], (1995, None, False, True)),
+        ({"released_before": 2005}, ["Old"], (None, 2005, True, False)),
+        ({"released_after": 2005}, [], (2005, None, False, True)),
+        ({"released_before": 1995}, [], (None, 1995, True, False)),
+        ({}, ["New", "Old", "Undated"], (None, None, True, True)),
     ],
 )
 def test_optional_year_bounds(
-    session: Session, bounds: dict[str, int | bool], expected: list[str]
+    session: Session,
+    bounds: dict[str, int],
+    expected: list[str],
+    interpreted_bounds: tuple[int | None, int | None, bool, bool],
 ) -> None:
+    """API year semantics preserve literal bounds and exclude undated rows."""
     add_movie(session, "Old", 1995)
     add_movie(session, "New", 2005)
     add_movie(session, "Undated", None)
@@ -165,6 +181,13 @@ def test_optional_year_bounds(
         response = client.post("/recommendations", json={"query": "comedies"})
     assert response.status_code == 200
     assert [item["title"] for item in response.json()["items"]] == expected
+    intent = response.json()["intent"]
+    assert (
+        intent["year_min"],
+        intent["year_max"],
+        intent["year_min_inclusive"],
+        intent["year_max_inclusive"],
+    ) == interpreted_bounds
 
 
 def test_caps_and_orders_cards_without_duplicates(session: Session) -> None:
@@ -222,7 +245,11 @@ def test_title_keywords_match_literal_unicode_case_pairs(
     add_movie(session, f"The {nonmatch} Story")
     add_movie(session, f"The {title} Film")
     filters: dict[str, object] = (
-        {"genres": ["Comedy", "Drama"], "year_min": 1990, "year_max": 1999}
+        {
+            "genres": ["Comedy", "Drama"],
+            "released_since": 1990,
+            "released_until": 1999,
+        }
         if combined_filters
         else {}
     )
@@ -235,7 +262,15 @@ def test_title_keywords_match_literal_unicode_case_pairs(
         )
 
     assert response.status_code == 200
-    assert response.json()["intent"] == parsed
+    assert response.json()["intent"] == {
+        "genres": ["Comedy", "Drama"] if combined_filters else [],
+        "year_min": 1990 if combined_filters else None,
+        "year_max": 1999 if combined_filters else None,
+        "year_min_inclusive": True,
+        "year_max_inclusive": True,
+        "title_keywords": [keyword, "STORY"],
+        "unsupported_constraints": [],
+    }
     assert [item["id"] for item in response.json()["items"]] == (
         [1] if combined_filters else [1, 2, 3]
     )
@@ -247,7 +282,7 @@ def test_title_keywords_match_literal_unicode_case_pairs(
 
 def test_no_matches_does_not_relax_filters(session: Session) -> None:
     add_movie(session, "Comedy")
-    parsed = intent_data(genres=["Comedy"], year_min=2020)
+    parsed = intent_data(genres=["Comedy"], released_since=2020)
     with recommendation_client(
         session, lambda _: model_reply(parsed)
     ) as client:
@@ -283,13 +318,15 @@ def test_invalid_request_never_calls_model(
     "parsed",
     [
         intent_data(genres=["Invented genre"]),
-        intent_data(year_min=2000, year_max=1990),
-        intent_data(year_min="1990"),
-        intent_data(year_min=True),
-        intent_data(year_min_inclusive="false"),
+        intent_data(released_since=2000, released_until=1990),
+        intent_data(released_since="1990"),
+        intent_data(released_since=True),
+        intent_data(released_after="1990"),
         intent_data(title_keywords=[""]),
         intent_data(title_keywords=["x"] * 11),
         intent_data(sql="SELECT * FROM movies"),
+        intent_data(released_after=1990, released_since=1995),
+        intent_data(released_before=2000, released_until=1995),
         {"genres": []},
     ],
 )
@@ -316,7 +353,7 @@ def test_rejects_invalid_model_intent(
             },
         ),
         httpx.Response(200, json={"message": {"content": "{}"}}),
-        model_reply(intent_data(year_min=1990), done_reason="length"),
+        model_reply(intent_data(released_since=1990), done_reason="length"),
     ],
 )
 def test_rejects_malformed_or_truncated_response(
